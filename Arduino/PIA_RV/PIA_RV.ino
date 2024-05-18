@@ -12,7 +12,7 @@
 #define ledPinG 9
 #define ledPinB 6
 #define BUTTON_PIN 2
-#define motorPin 12
+#define motorPin 7
 
 MPU6050 mpu;
 //Madgwick filter;
@@ -41,6 +41,8 @@ bool motor = false;
 int brilloR = 0; // Variable para el brillo del LED
 int brilloG = 0; // Variable para el brillo del LED
 int brilloB = 0; // Variable para el brillo del LED
+
+int coutDelay=0;
 
 
 unsigned int button_status = 0;
@@ -101,7 +103,7 @@ int countNote =0;
 bool music = false;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(57600);
 
   Wire.begin();
   mpu.initialize();
@@ -156,6 +158,13 @@ void setup() {
 
 void loop() {
 
+  if(coutDelay <24000){
+    coutDelay++;
+  }
+  else{
+    coutDelay=0;
+  
+
   if(music){
     if(countNote >= pauseBetweenNotes){
       countNote=0;
@@ -176,10 +185,10 @@ void loop() {
   }
 
   // Leer datos del MPU6050
-  int16_t ax, ay, az;
-  int16_t gx, gy, gz;
+  //int16_t ax, ay, az;
+  //int16_t gx, gy, gz;
 
-  mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+  //mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
   if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { 
     mpu.dmpGetQuaternion(&q, fifoBuffer);
@@ -230,43 +239,11 @@ void loop() {
 
   //ang_y_prev=pitch;
 
-  //ang_z_prev=yaw;
-  int aux2 = abs(lecturaAnterior[1] - ypr[1]);
-  if(ypr[2] >90 || ypr[2] < -90 && aux2 >40){
-    //ypr[1] =lecturaAnterior[1];
-  }
-  else{
-    aux2 = abs(ypr[2] - lecturaAnterior[2]);
-    if(ypr[1] >80 || ypr[1] < -80 ){
-      //ypr[2] =lecturaAnterior[2];
-      //ypr[0] =lecturaAnterior[0];
-      if(ypr[2] > lecturaAnterior[2]){
-        //ypr[2] -=aux2;
-      }
-      else{
-        if(ypr[2] < lecturaAnterior[2]){
-          //ypr[2] +=aux2;
-        }
-      }
-      //ypr[0] +=140;
-    }
-  }
-
   
 
   for(int i = 0; i < 3; i++){
     if((ypr[i] - lecturaAnterior[i] > giroOffset || ypr[i] - lecturaAnterior[i] < -giroOffset)) {
       //mostrar[i] = (ypr[i] + lecturaAnterior[i])/2;
-      if(ypr[i] - lecturaAnterior[i] >120){
-        //ypr[i]-=ypr[i] - lecturaAnterior[i];
-      }
-      else{
-        if(ypr[i] - lecturaAnterior[i] < -120){
-          //ypr[i]+=ypr[i] - lecturaAnterior[i];
-        }
-      }
-
-      
 
       mostrar[i] = ypr[i];
       lecturaAnterior[i] = mostrar[i];
@@ -333,24 +310,26 @@ void loop() {
   if(boton1 != button_status){
     if (button_status == HIGH) {
       tone(buzzerPin, 1000);
-      Serial.println("Boton aplastado");
-      digitalWrite(motorPin, 1);
+      //Serial.println("B1=1");
+      //digitalWrite(motorPin, 1);
       boton1 = true;
     } else {
       noTone(buzzerPin);
-      Serial.println("Boton levantado");
-      digitalWrite(motorPin, LOW);
+      //Serial.println("B1=0");
+      //digitalWrite(motorPin, LOW);
       boton1 = false;
     }
   }
   
 
-  Serial.print("P=");
-  Serial.print(mostrar[2]);
-  Serial.print(" R=");
+  //Serial.print("P=");
   Serial.print(-mostrar[1]);
-  Serial.print(" Y=");
-  Serial.println(mostrar[0]);
+  Serial.print(",");
+  Serial.print(-mostrar[2]);
+  Serial.print(",");
+  Serial.print(mostrar[0]);
+  Serial.print(",");
+  Serial.println(boton1);
   
 
   // Verificar si hay datos disponibles en el puerto serie
@@ -363,7 +342,15 @@ void loop() {
       case '0':
         continuarLoop = false;
         motor=false;
+        luces = false;
+        luzRoja = false;
         digitalWrite(motorPin, LOW);
+        analogWrite(ledPinR, 0); // Establecer el brillo del LED
+        analogWrite(ledPinG, 0); // Establecer el brillo del LED
+        analogWrite(ledPinB, 0); // Establecer el brillo del LED
+        lucesApagadas = true;
+        tiempoInicio = millis();
+        brilloR = 0, brilloG = 0, brilloB = 0;
         break;
 
       case '4':
@@ -392,7 +379,7 @@ void loop() {
 
       case '6':
         if(!motor){
-          digitalWrite(motorPin, 1);
+          digitalWrite(motorPin, 100);
         }
         else{
           digitalWrite(motorPin, LOW);
@@ -416,6 +403,8 @@ void loop() {
         if (entrada == '1') {
           continuarLoop = true;
           calibrarGiro();
+          luces = true;
+          lucesApagadas= false;
         }
         delay(100);
         //Serial.println("P=");
@@ -424,7 +413,9 @@ void loop() {
     }
   }
 
-  delay(25);
+  //delay(25);
+  
+  }
   
 }
 
