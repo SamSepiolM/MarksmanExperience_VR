@@ -17,6 +17,10 @@
 				"Android",
 				"HoloLens"
 			]
+		},
+		{
+			"Name": "UE4Duino",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [

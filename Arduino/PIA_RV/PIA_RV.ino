@@ -22,7 +22,7 @@ float lecturaAnterior[3]{0,0,0};
 float mostrar[3]{0,0,0};
 
 float roll = 0, pitch = 0, yaw= 0;
-float ang_x_prev, ang_y_prev, ang_z_prev;
+float ang_x_prev, ang_y_prev, ang_z_prev = 0.0;
 
 float dt;
 float deltaTime = 0;
@@ -49,7 +49,7 @@ unsigned int button_status = 0;
 
 unsigned long tiempoInicio = 0;
 
-float ypr[3];
+float ypr[3]{0,0,0};
 Quaternion q;
 VectorFloat gravity;
 uint8_t fifoBuffer[64];
@@ -123,7 +123,7 @@ void setup() {
     dmpReady = true;
 
     // get expected DMP packet size for later comparison
-    packetSize = mpu.dmpGetFIFOPacketSize();
+    //packetSize = mpu.dmpGetFIFOPacketSize();
   } else {
     // ERROR!
     // 1 = initial memory load failed
@@ -185,10 +185,10 @@ void loop() {
   }
 
   // Leer datos del MPU6050
-  //int16_t ax, ay, az;
-  //int16_t gx, gy, gz;
+  int16_t ax, ay, az;
+  int16_t gx, gy, gz;
 
-  //mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+  mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
   if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { 
     mpu.dmpGetQuaternion(&q, fifoBuffer);
@@ -200,6 +200,7 @@ void loop() {
   ypr[0]*= 180/M_PI;
   ypr[1]*= 180/M_PI;
   ypr[2]*= 180/M_PI;
+  ypr[0]-=ang_z_prev;
 
   
   dt = (millis()-tiempo_prev)/1000.0;
@@ -320,12 +321,17 @@ void loop() {
       boton1 = false;
     }
   }
+  else{
+    if(boton1){
+      noTone(buzzerPin);
+    }
+  }
   
 
   //Serial.print("P=");
-  Serial.print(-mostrar[1]);
+  Serial.print(mostrar[1]);
   Serial.print(",");
-  Serial.print(-mostrar[2]);
+  Serial.print(mostrar[2]);
   Serial.print(",");
   Serial.print(mostrar[0]);
   Serial.print(",");
@@ -379,13 +385,17 @@ void loop() {
 
       case '6':
         if(!motor){
-          digitalWrite(motorPin, 100);
+          digitalWrite(motorPin, HIGH);
         }
         else{
           digitalWrite(motorPin, LOW);
         }
         motor=!motor;
         break;
+
+      case '7':
+        calibrarGiro();
+      break;
     }
   }
 
@@ -421,14 +431,21 @@ void loop() {
 
 
 void calibrarGiro(){
+
+  ang_z_prev =ypr[0] + ang_z_prev;
+
+  for(int i=0;i<3;i++){
+    lecturaAnterior[i] = 0.0;
+    mostrar[i] = 0.0;
+    ypr[i] = 0.0;
+  }
+
   // Calibration Time: generate offsets and calibrate our MPU6050
-  mpu.CalibrateAccel(6);
+
   mpu.CalibrateGyro(6);
+  mpu.CalibrateAccel(6);
+  
   Serial.println("");
   mpu.PrintActiveOffsets();
 
-  for(int i=0;i<3;i++){
-    lecturaAnterior[i] = 0;
-    mostrar[i] = 0;
-  }
 }
